@@ -144,8 +144,9 @@ except Exception as e:
     df = None
 
 if df is not None:
-    # --- Sidebar ---
+    # Sidebar
     st.sidebar.markdown("## Control Panel")
+    st.sidebar.caption("App Version: 1.1 (Stable)")
     
     # Store Selection
     store_ids = sorted(df['store_nbr'].unique())
