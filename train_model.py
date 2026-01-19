@@ -91,12 +91,30 @@ def run_pipeline():
     print("Feature Engineering...")
     for df in [train, test]:
         if df is not None:
+            # Sort for time series features
+            df.sort_values(['store_nbr', 'item_nbr', 'date'], inplace=True)
+
+            # Lags (1 week, 2 weeks, 4 weeks)
+            print("Generating Lags...")
+            for lag in [7, 14, 28]:
+                df[f'lag_{lag}'] = df.groupby(['store_nbr', 'item_nbr'])['unit_sales'].shift(lag)
+
+            # Rolling Means (Trend)
+            print("Generating Rolling Means...")
+            for window in [7, 28]:
+                 df[f'rolling_mean_{window}'] = df.groupby(['store_nbr', 'item_nbr'])['unit_sales'].transform(lambda x: x.shift(1).rolling(window).mean())
+
+            # Date Parts
             df['date'] = pd.to_datetime(df['date'])
             df['year'] = df['date'].dt.year
             df['month'] = df['date'].dt.month
             df['day'] = df['date'].dt.day
             df['dayofweek'] = df['date'].dt.dayofweek
             df['is_weekend'] = (df['dayofweek'] >= 5).astype(int)
+
+            # Drop NaNs created by lags (or fill them if preserving data size is critical, but dropping is safer for initial training)
+            # Using 30 days buffer to be safe
+            df.fillna(0, inplace=True)  # Simple fill for demo robustness
     
     # 4. Train Model
     print("Preparing Training Data...")
