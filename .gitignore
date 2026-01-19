@@ -1,21 +1,14 @@
-# Datasets
 *.csv
 !data/train_sample.csv
 !data/holidays_events.csv
 !holidays_events.csv
-
-# Explicitly ignoring huge files:
 data/test.csv
 data/submission.csv
 data/items.csv
 data/stores.csv
 data/oil.csv
-
-# Models
 *.pkl
 !models/model.pkl
-
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -23,7 +16,5 @@ __pycache__/
 env/
 venv/
 .ipynb_checkpoints/
-
-# IDEs
 .vscode/
 .idea/

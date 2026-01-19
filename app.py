@@ -6,17 +6,14 @@ import plotly.graph_objects as go
 import pickle
 import os
 
-# --- Page Config ---
 st.set_page_config(
     page_title="Favorita Sales Intelligence", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS for Premium Dark Look ---
 st.markdown("""
 <style>
-    /* Global Dark Theme Overrides */
     .stApp {
         background-color: #0e1117;
         color: #fafafa;
@@ -26,7 +23,6 @@ st.markdown("""
         border-right: 1px solid #30363d;
     }
     
-    /* Metrics Cards */
     div.css-1r6slb0, div.css-12w0qpk {
         background-color: #161b22;
         border: 1px solid #30363d;
@@ -35,7 +31,7 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     .metric-card {
-        background-color: #1f2937; /* Dark Gray */
+        background-color: #1f2937;
         padding: 20px;
         border-radius: 12px;
         border: 1px solid #374151;
@@ -58,13 +54,11 @@ st.markdown("""
         margin-bottom: 5px;
     }
 
-    /* Headers */
     h1, h2, h3 {
         color: #f3f4f6;
         font-weight: 600;
     }
     
-    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
     }
@@ -82,10 +76,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Helper Functions ---
 @st.cache_data
 def load_data():
-    # Use absolute paths to be robust against CWD changes
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "data")
     data_path = os.path.join(data_dir, "train.csv")
@@ -93,13 +85,11 @@ def load_data():
     
     if os.path.exists(data_path):
         try:
-            # Load larger subset if full file exists (Local Mode)
             df = pd.read_csv(data_path, nrows=200000, parse_dates=['date'])
         except Exception as e:
             return None, f"Error loading train.csv: {e}"
     elif os.path.exists(sample_path):
         try:
-            # Load sample file (Cloud/Deployment Mode)
             df = pd.read_csv(sample_path, parse_dates=['date'])
         except Exception as e:
             return None, f"Error loading sample data: {e}"
@@ -111,7 +101,6 @@ def load_data():
         if not required_cols.issubset(df.columns):
             return None, f"Dataset missing required columns: {required_cols - set(df.columns)}"
         
-        # Ensure onpromotion boolean
         if 'onpromotion' in df.columns:
             df['onpromotion'] = df['onpromotion'].fillna(False).astype(bool)
         else:
@@ -121,7 +110,6 @@ def load_data():
     except Exception as e:
         return None, f"Error processing data: {e}"
 
-# --- Main App ---
 st.title("Favorita Sales Intelligence")
 st.markdown("### Demand Forecasting & Analytics Dashboard")
 
@@ -133,7 +121,6 @@ try:
             st.error(error_msg)
             df = None
         
-        # Check if we are using sample data for notification
         if df is not None:
              base_dir = os.path.dirname(os.path.abspath(__file__))
              if not os.path.exists(os.path.join(base_dir, "data", "train.csv")) and os.path.exists(os.path.join(base_dir, "data", "train_sample.csv")):
@@ -144,15 +131,12 @@ except Exception as e:
     df = None
 
 if df is not None:
-    # Sidebar
     st.sidebar.markdown("## Control Panel")
     st.sidebar.caption("App Version: 1.1 (Stable)")
     
-    # Store Selection
     store_ids = sorted(df['store_nbr'].unique())
     selected_store = st.sidebar.selectbox("Select Store", store_ids)
     
-    # Item Selection
     store_items = df[df['store_nbr'] == selected_store]['item_nbr'].unique()
     if len(store_items) > 0:
         item_ids = sorted(store_items)
@@ -161,18 +145,15 @@ if df is not None:
         st.sidebar.warning("No items found.")
         selected_item = None
 
-    # Date Selection
     min_date, max_date = df['date'].min(), df['date'].max()
     date_range = st.sidebar.date_input("Analysis Period", [min_date, max_date], min_value=min_date, max_value=max_date)
     
-    # Advanced Options
     st.sidebar.markdown("---")
     st.sidebar.markdown("### View Options")
     show_trend = st.sidebar.checkbox("Show Trendline (OLS)", value=True)
     show_moving_avg = st.sidebar.checkbox("Show 7-Day Moving Avg", value=True)
 
     if selected_store and selected_item and len(date_range) == 2:
-        # Filter Data
         mask = (df['store_nbr'] == selected_store) & \
                (df['item_nbr'] == selected_item) & \
                (df['date'] >= pd.to_datetime(date_range[0])) & \
@@ -183,7 +164,6 @@ if df is not None:
             filtered_df['DayOfWeek'] = filtered_df['date'].dt.day_name()
             filtered_df['Month'] = filtered_df['date'].dt.month_name()
             
-            # --- Key Metrics Row ---
             col1, col2, col3, col4 = st.columns(4)
             
             total_sales = filtered_df['unit_sales'].sum()
@@ -196,13 +176,11 @@ if df is not None:
             col3.markdown(f'<div class="metric-card"><div class="metric-label">Peak Sales</div><div style="font-size: 20px; font-weight: bold; color: #f3f4f6; margin-top: 10px;">{peak_day}</div></div>', unsafe_allow_html=True)
             col4.markdown(f'<div class="metric-card"><div class="metric-label">Promo Days</div><div class="metric-value" style="color: #10b981;">{promo_days}</div></div>', unsafe_allow_html=True)
 
-            # --- Main Charts Area ---
             tab1, tab2, tab3 = st.tabs(["Sales Performance", "Deep Dive", "ML Forecast"])
 
             with tab1:
                 col_chart, col_stat = st.columns([3, 1])
                 with col_chart:
-                    # Time Series Chart
                     fig = px.line(filtered_df, x='date', y='unit_sales', 
                                   title="Daily Sales Trajectory",
                                   labels={'unit_sales': 'Units Sold', 'date': 'Date'},

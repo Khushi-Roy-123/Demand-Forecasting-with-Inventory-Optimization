@@ -13,7 +13,6 @@ warnings.filterwarnings('ignore')
 def run_pipeline():
     print("Starting pipeline...")
     
-    # 1. Load Data
     print("Loading data...")
     dtypes = {
         'id': 'int32',
@@ -25,8 +24,6 @@ def run_pipeline():
     
     data = {}
     if 'train.csv' in os.listdir('data'):
-        # Using 1M rows for demo speed. 
-        # Note: 1M rows might cover only a short period (e.g. Jan-Mar 2013)
         data['train'] = pd.read_csv(os.path.join('data', 'train.csv'), dtype=dtypes, parse_dates=['date'], nrows=1000000)
     else:
         print("Error: train.csv not found!")
@@ -35,7 +32,6 @@ def run_pipeline():
     if 'test.csv' in os.listdir():
         data['test'] = pd.read_csv('test.csv', dtype=dtypes, parse_dates=['date'])
     
-    # Load supporting files
     for f in ['items.csv', 'stores.csv', 'oil.csv', 'holidays_events.csv']:
         if f in os.listdir('data'):
             print(f"Loading {f}...")
@@ -46,12 +42,10 @@ def run_pipeline():
             else:
                  data[name] = pd.read_csv(file_path)
 
-    # 2. Preprocess
     print("Preprocessing...")
     train = data['train']
     test = data.get('test')
     
-    # Merge logic
     oil = data.get('oil')
     if oil is not None:
         try:
@@ -87,24 +81,19 @@ def run_pipeline():
     train['onpromotion'] = train['onpromotion'].fillna(False).astype(bool)
     if test is not None: test['onpromotion'] = test['onpromotion'].fillna(False).astype(bool)
 
-    # 3. Feature Engineering
     print("Feature Engineering...")
     for df in [train, test]:
         if df is not None:
-            # Sort for time series features
             df.sort_values(['store_nbr', 'item_nbr', 'date'], inplace=True)
 
-            # Lags (1 week, 2 weeks, 4 weeks)
             print("Generating Lags...")
             for lag in [7, 14, 28]:
                 df[f'lag_{lag}'] = df.groupby(['store_nbr', 'item_nbr'])['unit_sales'].shift(lag)
 
-            # Rolling Means (Trend)
             print("Generating Rolling Means...")
             for window in [7, 28]:
                  df[f'rolling_mean_{window}'] = df.groupby(['store_nbr', 'item_nbr'])['unit_sales'].transform(lambda x: x.shift(1).rolling(window).mean())
 
-            # Date Parts
             df['date'] = pd.to_datetime(df['date'])
             df['year'] = df['date'].dt.year
             df['month'] = df['date'].dt.month
@@ -112,15 +101,11 @@ def run_pipeline():
             df['dayofweek'] = df['date'].dt.dayofweek
             df['is_weekend'] = (df['dayofweek'] >= 5).astype(int)
 
-            # Drop NaNs created by lags (or fill them if preserving data size is critical, but dropping is safer for initial training)
-            # Using 30 days buffer to be safe
-            df.fillna(0, inplace=True)  # Simple fill for demo robustness
+            df.fillna(0, inplace=True)
     
-    # 4. Train Model
     print("Preparing Training Data...")
     drop_cols = ['id', 'date', 'unit_sales', 'description', 'locale', 'locale_name', 'type_x', 'type_y', 'city', 'state']
     
-    # Encode strings
     for col in train.select_dtypes(include=['object']).columns:
         if col not in drop_cols:
             le = LabelEncoder()
@@ -128,17 +113,13 @@ def run_pipeline():
             train[col] = le.fit_transform(train[col])
             if test is not None and col in test.columns:
                  test[col] = test[col].astype(str)
-                 # Fit transform separately for demo robustness
                  test[col] = LabelEncoder().fit_transform(test[col])
 
     features = [c for c in train.columns if c not in drop_cols and c != 'unit_sales']
     target = 'unit_sales'
     
-    # SORT by date for time series split
     train = train.sort_values('date')
     
-    # Robust Split: Use last 10% or just last 28 days if data covers enough range
-    # Given 1M rows demo, safe to use simple index split to ensure non-empty sets
     split_idx = int(len(train) * 0.9)
     if split_idx == 0 or split_idx == len(train):
         print("Data too small for split. Using last 100 rows as val.")
@@ -171,14 +152,12 @@ def run_pipeline():
     
     model = lgb.train(params, lgb_train, num_boost_round=200, valid_sets=[lgb_val], callbacks=[lgb.early_stopping(50)])
     
-    # Save Model
     if not os.path.exists('models'):
         os.makedirs('models')
     with open(os.path.join('models', 'model.pkl'), 'wb') as f:
         pickle.dump(model, f)
     print("Model saved to models/model.pkl")
     
-    # 5. Submission
     if test is not None:
         print("Generating Submission...")
         X_test = test[features].fillna(0)
