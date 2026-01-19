@@ -1,8 +1,7 @@
 # Datasets
 *.csv
 !holidays_events.csv
-# If you want to include small csvs (like holidays), you can force add them, 
-# but generally we ignore large data. 
+
 # Explicitly ignoring huge files:
 train.csv
 test.csv

@@ -85,33 +85,31 @@ st.markdown("""
 # --- Helper Functions ---
 @st.cache_data
 def load_data():
-    data_path = "train.csv"
-    sample_path = "train_sample.csv"
+    # Use absolute paths to be robust against CWD changes
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, "data")
+    data_path = os.path.join(data_dir, "train.csv")
+    sample_path = os.path.join(data_dir, "train_sample.csv")
     
     if os.path.exists(data_path):
         try:
             # Load larger subset if full file exists (Local Mode)
             df = pd.read_csv(data_path, nrows=200000, parse_dates=['date'])
         except Exception as e:
-            st.error(f"Error loading train.csv: {e}")
-            return None
+            return None, f"Error loading train.csv: {e}"
     elif os.path.exists(sample_path):
         try:
             # Load sample file (Cloud/Deployment Mode)
             df = pd.read_csv(sample_path, parse_dates=['date'])
-            st.toast("Running in Cloud Mode: Using sample dataset.", icon="☁️")
         except Exception as e:
-            st.error(f"Error loading sample data: {e}")
-            return None
+            return None, f"Error loading sample data: {e}"
     else:
-        st.error("Data files not found. Please upload 'train_sample.csv' to your repository.")
-        return None
+        return None, "Data files not found. Please ensure 'train_sample.csv' is in 'data/' folder."
         
     try:
         required_cols = {'date', 'store_nbr', 'item_nbr', 'unit_sales'}
         if not required_cols.issubset(df.columns):
-            st.error(f"Dataset missing required columns: {required_cols - set(df.columns)}")
-            return None
+            return None, f"Dataset missing required columns: {required_cols - set(df.columns)}"
         
         # Ensure onpromotion boolean
         if 'onpromotion' in df.columns:
@@ -119,10 +117,9 @@ def load_data():
         else:
             df['onpromotion'] = False
             
-        return df
+        return df, None
     except Exception as e:
-        st.error(f"Error processing data: {e}")
-        return None
+        return None, f"Error processing data: {e}"
 
 # --- Main App ---
 st.title("Favorita Sales Intelligence")
@@ -130,7 +127,18 @@ st.markdown("### Demand Forecasting & Analytics Dashboard")
 
 try:
     with st.spinner('Loading and processing data...'):
-        df = load_data()
+        df, error_msg = load_data()
+        
+        if error_msg:
+            st.error(error_msg)
+            df = None
+        
+        # Check if we are using sample data for notification
+        if df is not None:
+             base_dir = os.path.dirname(os.path.abspath(__file__))
+             if not os.path.exists(os.path.join(base_dir, "data", "train.csv")) and os.path.exists(os.path.join(base_dir, "data", "train_sample.csv")):
+                 st.toast("Running in Cloud Mode: Using sample dataset.", icon="☁️")
+                 
 except Exception as e:
     st.error(f"Critical error: {e}")
     df = None
@@ -252,7 +260,8 @@ if df is not None:
                     st.plotly_chart(fig_promo, use_container_width=True)
 
             with tab3:
-                model_path = "model.pkl"
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                model_path = os.path.join(base_dir, "models", "model.pkl")
                 if os.path.exists(model_path):
                     col_m1, col_m2 = st.columns([1, 2])
                     with col_m1:

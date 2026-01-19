@@ -24,10 +24,10 @@ def run_pipeline():
     }
     
     data = {}
-    if 'train.csv' in os.listdir():
+    if 'train.csv' in os.listdir('data'):
         # Using 1M rows for demo speed. 
         # Note: 1M rows might cover only a short period (e.g. Jan-Mar 2013)
-        data['train'] = pd.read_csv('train.csv', dtype=dtypes, parse_dates=['date'], nrows=1000000)
+        data['train'] = pd.read_csv(os.path.join('data', 'train.csv'), dtype=dtypes, parse_dates=['date'], nrows=1000000)
     else:
         print("Error: train.csv not found!")
         return
@@ -37,13 +37,14 @@ def run_pipeline():
     
     # Load supporting files
     for f in ['items.csv', 'stores.csv', 'oil.csv', 'holidays_events.csv']:
-        if f in os.listdir():
+        if f in os.listdir('data'):
             print(f"Loading {f}...")
             name = f.split('.')[0].replace('_events','')
+            file_path = os.path.join('data', f)
             if f in ['oil.csv', 'holidays_events.csv']:
-                 data[name] = pd.read_csv(f, parse_dates=['date'])
+                 data[name] = pd.read_csv(file_path, parse_dates=['date'])
             else:
-                 data[name] = pd.read_csv(f)
+                 data[name] = pd.read_csv(file_path)
 
     # 2. Preprocess
     print("Preprocessing...")
@@ -153,9 +154,11 @@ def run_pipeline():
     model = lgb.train(params, lgb_train, num_boost_round=200, valid_sets=[lgb_val], callbacks=[lgb.early_stopping(50)])
     
     # Save Model
-    with open('model.pkl', 'wb') as f:
+    if not os.path.exists('models'):
+        os.makedirs('models')
+    with open(os.path.join('models', 'model.pkl'), 'wb') as f:
         pickle.dump(model, f)
-    print("Model saved to model.pkl")
+    print("Model saved to models/model.pkl")
     
     # 5. Submission
     if test is not None:
