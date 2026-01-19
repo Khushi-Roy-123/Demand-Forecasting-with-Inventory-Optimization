@@ -1,0 +1,28 @@
+# Datasets
+*.csv
+!holidays_events.csv
+# If you want to include small csvs (like holidays), you can force add them, 
+# but generally we ignore large data. 
+# Explicitly ignoring huge files:
+train.csv
+test.csv
+items.csv
+stores.csv
+oil.csv
+submission.csv
+
+# Models
+*.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
