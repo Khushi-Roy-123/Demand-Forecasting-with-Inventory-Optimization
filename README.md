@@ -1,4 +1,4 @@
-# Favorita Grocery Sales Forecasting
+# Grocery Sales Forecasting
 
 ## Project Overview
 
@@ -6,7 +6,7 @@ This project focuses on **time-series sales forecasting** using the _Corporació
 
 This project demonstrates **real-world forecasting**, advanced **feature engineering**, and **regression modeling**, making it highly relevant for data science and ML internship roles.
 
-**Live Demo:** [Streamlit App Link - CLICK HERE](YOUR_STREAMLIT_SHARE_LINK_HERE)
+**Live Demo:** [Streamlit App Link - CLICK HERE](https://demand-forecasting-with-inventory-optimization-bv6cmeua96qzxnm.streamlit.app/)
 
 ---
 
