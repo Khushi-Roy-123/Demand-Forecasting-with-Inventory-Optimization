@@ -86,13 +86,28 @@ st.markdown("""
 @st.cache_data
 def load_data():
     data_path = "train.csv"
-    if not os.path.exists(data_path):
-        st.error(f"File not found: {data_path}")
+    sample_path = "train_sample.csv"
+    
+    if os.path.exists(data_path):
+        try:
+            # Load larger subset if full file exists (Local Mode)
+            df = pd.read_csv(data_path, nrows=200000, parse_dates=['date'])
+        except Exception as e:
+            st.error(f"Error loading train.csv: {e}")
+            return None
+    elif os.path.exists(sample_path):
+        try:
+            # Load sample file (Cloud/Deployment Mode)
+            df = pd.read_csv(sample_path, parse_dates=['date'])
+            st.toast("Running in Cloud Mode: Using sample dataset.", icon="☁️")
+        except Exception as e:
+            st.error(f"Error loading sample data: {e}")
+            return None
+    else:
+        st.error("Data files not found. Please upload 'train_sample.csv' to your repository.")
         return None
-    try:
-        # Load larger subset for better analytics
-        df = pd.read_csv(data_path, nrows=200000, parse_dates=['date'])
         
+    try:
         required_cols = {'date', 'store_nbr', 'item_nbr', 'unit_sales'}
         if not required_cols.issubset(df.columns):
             st.error(f"Dataset missing required columns: {required_cols - set(df.columns)}")
@@ -106,7 +121,7 @@ def load_data():
             
         return df
     except Exception as e:
-        st.error(f"Error loading train.csv: {e}")
+        st.error(f"Error processing data: {e}")
         return None
 
 # --- Main App ---
